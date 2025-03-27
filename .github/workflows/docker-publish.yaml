@@ -9,7 +9,7 @@ on:
       - 'nginx.conf'
 
 jobs:
-  docker:
+  push-image-to-registry:
     runs-on: ubuntu-latest
 
     permissions:
