@@ -99,6 +99,13 @@ clusters:
 
 be sure to save this kubeconfig to your local maschine or whatever maschine you want to access the cluster.
 
+## Kubernetes Dashboard
+
+### Domain Security Status
+
+<img src="img/scan_result.png" alt="scan result grade a of s">
+
+
 ## references
 
 [1] Official k3s Documentation: https://docs.k3s.io/
