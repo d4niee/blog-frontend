@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { blogMap } from '../blogs/blogIndex';
 
-const markdownFiles = import.meta.glob('../blogs/*.md', {
+const markdownFiles = import.meta.glob('../blogs/**/*.md', {
     query: '?raw',
     import: 'default',
   });
