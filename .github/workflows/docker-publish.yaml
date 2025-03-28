@@ -3,10 +3,6 @@ name: Docker Publish
 on:
   push:
     branches: [main]
-    paths:
-      - '.github/workflows/docker-publish.yml'
-      - 'Dockerfile'
-      - 'nginx.conf'
 
 jobs:
   push-image-to-registry:
