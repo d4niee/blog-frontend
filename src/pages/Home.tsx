@@ -8,6 +8,12 @@ const Home: React.FC = () => (
 
     <Link to="/blog/demo" className="text-blue-600 underline">
       👉 demo blog-entry
+    </Link><br></br>
+    <Link to="/blog/gitops-challenges" className="text-blue-600 underline">
+      👉 gitops
+    </Link><br></br>
+    <Link to="/blog/k3s-guide" className="text-blue-600 underline">
+      👉 k3s
     </Link>
   </div>
 );
