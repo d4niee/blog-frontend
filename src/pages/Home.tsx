@@ -15,6 +15,10 @@ const Home: React.FC = () => (
     <Link to="/blog/k3s-guide" className="text-blue-600 underline">
       👉 k3s
     </Link>
+    <br></br>
+    <Link to="/blog/self-managed-overleaf-instance" className="text-blue-600 underline">
+      👉 Self managed overleaf
+    </Link>
   </div>
 );
 
