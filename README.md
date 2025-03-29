@@ -1,3 +1,5 @@
+[![build](https://github.com/d4niee/blog-frontend/actions/workflows/build.yaml/badge.svg)](https://github.com/d4niee/blog-frontend/actions/workflows/build.yaml) [![Docker Publish](https://github.com/d4niee/blog-frontend/actions/workflows/docker-publish.yaml/badge.svg)](https://github.com/d4niee/blog-frontend/actions/workflows/docker-publish.yaml)
+
 # 📝 blog-frontend
 
 A simple Vite + React + TypeScript blog frontend that renders Markdown-based blog posts stored in the `src/blogs/` directory.
