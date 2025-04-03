@@ -65,7 +65,7 @@ sudo ufw allow from 10.43.0.0/16 to any
 ```
 
 also be sure that you maschine has at least 4G of RAM, 2 Cores and
-enough disk space, but k3s don'T need much space.
+enough disk space, but k3s don't need much disk space.
 
 ### installation
 
@@ -97,9 +97,79 @@ clusters:
 ...
 ```
 
-be sure to save this kubeconfig to your local maschine or whatever maschine you want to access the cluster.
+### set up kubeconfig on windows
+
+be sure to save this kubeconfig to your local maschine or whatever maschine you want to access the cluster. I will show you how to do that. First if you are using Windows you need to install kubectl [here](https://kubernetes.io/docs/tasks/tools/install-kubectl-windows/)
+
+after that you are able to use the kubectl command in the terminal to manage your cluster. But at this point we are only able to manage o local installed cluster like minkube. In order to access the VPS Cluster you need to create a file named ``config`` in the folder ``C:\Users\<user>\.kube`` and paste the content from the k3s.yaml file. Thats all you just need to make sure to change the following line:
+
+```
+server: https://127.0.0.1:6443
+```
+
+to your VPS Global IP adress. 
+
+now you can test the connection for example with ``kubectl get nodes`` and should see following output:
+```
+$ kubectl get nodes
+NAME        STATUS   ROLES                  AGE     VERSION
+vmd164557   Ready    control-plane,master   6d15h   v1.31.6+k3s1
+```
+
+### set up kubeconfig on Linux
+
+Download the latest version of kubectl
+
+```
+curl -LO "https://dl.k8s.io/release/$(curl -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+```
+
+make sure to make it executable
+
+```
+chmod +x kubectl
+```
+
+To verify the installation:
+```
+kubectl version --client
+```
+
+now copy the value from the k3s.yaml to your local linux machine
+```
+mkdir -p ~/.kube
+sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
+sudo chown $(id -u):$(id -g) ~/.kube/config
+```
+
+also here test the connection with:
+```
+$ kubectl get nodes
+NAME        STATUS   ROLES                  AGE     VERSION
+vmd164557   Ready    control-plane,master   6d15h   v1.31.6+k3s1
+```
+
+## Install Helm
+
+The last thing to to in order to fully manage our cluster is to install Helm. it is optionally but i would highly recommned to use Helm for managing cluster services.
+
+You can install Helm on Linux/Ubunto with this command:
+```
+curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+chmod 700 get_helm.sh
+./get_helm.sh
+```
+
+and on windows with choco what i would recommend. if you don't have choco installed you can install it [here](https://chocolatey.org/install)
+```
+choco install kubernetes-helm
+```
+
+And Thats it. we have now everything we need in order to install the Dashboard to our cluster and install cluster-services onto it.
 
 ## Kubernetes Dashboard
+
+
 
 ### Domain Security Status
 
