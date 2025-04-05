@@ -169,12 +169,289 @@ And Thats it. we have now everything we need in order to install the Dashboard t
 
 ## Kubernetes Dashboard
 
+### cert-manager
 
+```
+helm repo add jetstack https://charts.jetstack.io --force-update
+```
+
+```
+helm install \
+  cert-manager jetstack/cert-manager \
+  --namespace cert-manager \
+  --create-namespace \
+  --version v1.17.0 \
+  --set crds.enabled=true
+```
+
+verify:
+```
+kubectl -n cert-manager get pod
+```
+
+### certifacte management with Let's Encrypt
+
+```
+helm create cert-manager-config
+```
+
+remove everything from the ``templates`` folder and add following manifests instead:
+
+ci-production.yaml:
+```yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: {{ .Values.clusterIssuers.production.name }}
+  namespace: default
+spec:
+  acme:
+    server: {{ .Values.clusterIssuers.production.server }}
+    email: {{ .Values.clusterIssuers.email }}
+    privateKeySecretRef:
+      name: {{ .Values.clusterIssuers.production.secretName }}
+    solvers:
+      - selector: {}
+        http01:
+          ingress:
+            class: {{ .Values.clusterIssuers.ingressClass }}
+
+```
+
+ci-staging.yaml:
+```yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: {{ .Values.clusterIssuers.staging.name }}
+  namespace: default
+spec:
+  acme:
+    server: {{ .Values.clusterIssuers.staging.server }}
+    email: {{ .Values.clusterIssuers.email }}
+    privateKeySecretRef:
+      name: {{ .Values.clusterIssuers.staging.secretName }}
+    solvers:
+      - selector: {}
+        http01:
+          ingress:
+            class: {{ .Values.clusterIssuers.ingressClass }}
+
+```
+
+and paste the following values to the values.yaml manifest:
+
+values.yaml:
+```yaml
+clusterIssuers:
+  email: YOUR EMAIL
+  ingressClass: traefik
+
+  production:
+    name: letsencrypt-production
+    server: https://acme-v02.api.letsencrypt.org/directory
+    secretName: letsencrypt-production
+
+  staging:
+    name: letsencrypt-staging
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    secretName: letsencrypt-staging
+```
+
+verify the installation:
+```bash
+kubectl get ClusterIssuer -A
+
+kubectl describe clusterissuer letsencrypt-staging
+kubectl describe clusterissuer letsencrypt-production
+```
+
+### traefik
+
+```bash
+helm create ingress-controller
+```
+
+remove everything from the ``templates`` folder and add following manifests instead:
+
+hcc-ingress.yaml
+```yaml
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    globalArguments:
+      - "--serversTransport.insecureSkipVerify=true"
+    additionalArguments:
+      - "--api"
+      - "--api.dashboard=false"
+      - "--api.insecure=false"
+      - "--log.level=ERROR"
+    ports:
+      websecure:
+        tls:
+          enabled: true
+      web:
+        redirectTo:
+          port: websecure
+```
+
+ingress.yaml
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: traefik-ingress
+  namespace: kube-system
+  annotations:
+    spec.ingressClassName: traefik
+    traefik.frontend.rule.type: PathPrefixStrip
+    cert-manager.io/cluster-issuer: {{ .Values.traefik.ingress.clusterIssuer }}
+spec:
+  rules:
+    - host: {{ .Values.traefik.ingress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Values.traefik.dashboard.service.name }}
+                port:
+                  number: {{ .Values.traefik.dashboard.service.port }}
+  tls:
+    - hosts:
+        - {{ .Values.traefik.ingress.host }}
+      secretName: {{ .Values.traefik.ingress.tlsSecretName }}
+```
+
+service-traefik.yaml
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.traefik.dashboard.service.name }}
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/instance: {{ .Values.traefik.dashboard.service.selector.instance }}
+    app.kubernetes.io/name: {{ .Values.traefik.dashboard.service.selector.name }}-dashboard
+spec:
+  type: ClusterIP
+  ports:
+    - name: traefik
+      port: {{ .Values.traefik.dashboard.service.port }}
+      targetPort: {{ .Values.traefik.dashboard.service.targetPort }}
+      protocol: TCP
+  selector:
+    app.kubernetes.io/instance: {{ .Values.traefik.dashboard.service.selector.instance }}
+    app.kubernetes.io/name: {{ .Values.traefik.dashboard.service.selector.name }}
+
+```
+
+values.yaml
+```yaml
+traefik:
+  globalArguments:
+    - "--serversTransport.insecureSkipVerify=true"
+  additionalArguments:
+    - "--api"
+    - "--api.dashboard=false" # add here true if you want to access a traefik dashboard
+    - "--api.insecure=false"
+    - "--log.level=ERROR"
+  ports:
+    websecure:
+      tls:
+        enabled: true
+    web:
+      redirectTo:
+        port: websecure
+  ingress:
+    enabled: true
+    host: yourdomain.example.com
+    tlsSecretName: traefik-daniel-lambrecht-dev-tls
+    clusterIssuer: letsencrypt-production
+  dashboard:
+    service:
+      name: traefik-dashboard
+      port: 9000
+      targetPort: traefik
+      selector:
+        instance: traefik-kube-system
+        name: traefik
+```
+
+### demo nginx application
+
+```bash
+helm create nginx
+```
+
+values.yaml
+```yaml
+application:
+  name: application
+  image:
+    repository: nginx
+    tag: latest
+  containerPort: 80
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 80
+
+ingress:
+  enabled: true
+  host: yourdomain.example.de
+  path: /
+  pathType: Prefix
+  tls:
+    enabled: true
+    secretName: landingpage-daniel-lambrecht-dev-tls
+  annotations:
+    ingressClassName: traefik
+    certManagerClusterIssuer: letsencrypt-production
+
+certificate:
+  name: landingpage-cert
+  secretName: landingpage-daniel-lambrecht-dev-tls
+  issuerRef:
+    name: letsencrypt-production
+    kind: ClusterIssuer
+  commonName: yourdomain.example.de
+  dnsNames:
+    - yourdomain.example.de
+
+```
+
+```
+
+```
+<img src="img/nginx-screenshot.png" alt="nginx welcome page in the browser">
+
+### dashboard
+
+<img src="img/kube-ui.png" alt="nginx welcome page in the browser">
 
 ### Domain Security Status
 
 <img src="img/scan_result.png" alt="scan result grade a of s">
 
+### persistent admin key (optional)
+
+## How to manage cluster services?
+
+If you wonder how you can manage cluster services i can tell you there a many ways to do it. And I'm sure people find better solutions than me. But if you wan't to view how I manage my cluster services you can check out my cluster-services Repository [Here](https://github.com/d4niee/cluster-services). In this Repo you can learn:
+- how to structure a cluster-services repository
+- writing pipelines to:
+  - automate the cluster deployments
+  - linting helm charts
+  - recovery
+
+If you are interested take a look and inspiration.
 
 ## references
 
